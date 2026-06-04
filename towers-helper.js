@@ -4,11 +4,22 @@
 // Safe Towers visual helper loaded from GitHub.
 // Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
 
-const VERSION='1.2';
+const VERSION='1.5';
 const COLS=3;
+const STORE='tw_settings_v1';
 let picks=[];
 let enabled=true;
 let lastUrl=location.href;
+let autoStarted=false;
+let lastBoardState='';
+
+let settings=loadSettings();
+
+function loadSettings(){
+ try{return Object.assign({algorithm:'smart',n_safe:8},JSON.parse(localStorage.getItem(STORE)||'{}'));}
+ catch(e){return {algorithm:'smart',n_safe:8};}
+}
+function saveSettings(){localStorage.setItem(STORE,JSON.stringify(settings));}
 
 function css(s){const e=document.createElement('style');e.textContent=s;document.head.appendChild(e);}
 css(`
@@ -17,25 +28,54 @@ css(`
 #twPanel button{width:100%;padding:9px;margin-top:8px;border:0;border-radius:8px;background:#39FF14;color:#000;font-weight:bold;cursor:pointer}#twPanel button:hover{filter:brightness(1.1)}
 #twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#ddd;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto}
 .twWarn{color:#ffcc00;font-size:12px!important}.twVer{color:#9aa8ff!important;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
+#twSettings{position:fixed;inset:0;z-index:1000000000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:white}
+#twSettingsBox{width:680px;max-width:92vw;background:#120d1b;border:3px solid #8b3fb0;border-radius:34px;padding:34px 40px;box-shadow:0 0 30px rgba(0,0,0,.7)}
+#twSettingsBox h1{margin:0 0 28px;font-size:36px;color:white}#twSettingsBox label{display:flex;align-items:center;justify-content:space-between;margin:22px 0;font-size:18px;color:#d8d1df}
+#twSettingsBox select,#twSettingsBox input{width:140px;background:#2a1938;color:white;border:1px solid #8b3fb0;border-radius:7px;padding:10px 12px;font-size:16px;outline:none}
+#twSettingsSave{float:right;width:110px!important;background:#8b3fb0!important;color:white!important;border-radius:12px!important;font-size:16px!important}#twSettingsClose{float:right;width:110px!important;margin-right:10px;background:#2a1938!important;color:white!important;border:1px solid #8b3fb0!important;border-radius:12px!important;font-size:16px!important}
 `);
 
 function isTowers(){return location.href.includes('/towers');}
+function clamp(v,min,max){v=Number(v);if(!Number.isFinite(v))v=min;return Math.max(min,Math.min(max,Math.floor(v)));}
+
 function out(msg=''){
  const o=document.getElementById('twOut'); if(!o)return;
- const g=findGrid(); let t=`Version: ${VERSION}\nFound rows: ${g.length}\nFound tiles: ${g.reduce((a,r)=>a+r.length,0)}\n`;
+ const g=findGrid();
+ let t=`Version: ${VERSION}\nAlgorithm: ${settings.algorithm}\nSafe tiles: ${settings.n_safe}\nFound rows: ${g.length}\nFound tiles: ${g.reduce((a,r)=>a+r.length,0)}\n`;
  if(picks.length){const n=['Left','Middle','Right'];t+='\nPicks:\n';picks.forEach((p,i)=>t+=`Row ${i+1}: ${n[p]}\n`);}else t+='\nNo picks generated yet.\n';
  t+='\nRandom suggestions only.'; if(msg)t+=`\n\n${msg}`; o.textContent=t;
 }
+
 function panel(){
  if(!isTowers()||document.getElementById('twPanel'))return;
- const p=document.createElement('div'); p.id='twPanel'; p.innerHTML=`<h2>Towers ESP</h2><p class="twVer">Version: <b>${VERSION}</b></p><p><b>1 bomb / 2 safe</b></p><p>Safe chance per tile: <b>66.67%</b></p><button id="twGen">Generate ESP</button><button id="twRedraw">Redraw ESP</button><button id="twClear">Clear ESP</button><div id="twOut">Waiting...</div><p class="twWarn">Not a real predictor.</p>`;
+ const p=document.createElement('div'); p.id='twPanel';
+ p.innerHTML=`<h2>Towers ESP</h2><p class="twVer">Version: <b>${VERSION}</b></p><p><b>1 bomb / 2 safe</b></p><p>Safe chance per tile: <b>66.67%</b></p><button id="twGen">Generate ESP</button><button id="twRedraw">Redraw ESP</button><button id="twSet">Settings</button><button id="twClear">Clear ESP</button><div id="twOut">Waiting...</div><p class="twWarn">Not a real predictor.</p>`;
  document.body.appendChild(p);
- document.getElementById('twGen').onclick=gen;
+ document.getElementById('twGen').onclick=forceNewPicks;
  document.getElementById('twRedraw').onclick=draw;
- document.getElementById('twClear').onclick=()=>{enabled=false;clear();out('ESP cleared.')};
+ document.getElementById('twSet').onclick=openSettings;
+ document.getElementById('twClear').onclick=()=>{enabled=false;autoStarted=false;picks=[];clear();out('ESP cleared.')};
  out();
 }
+
+function openSettings(){
+ document.getElementById('twSettings')?.remove();
+ const wrap=document.createElement('div');wrap.id='twSettings';
+ wrap.innerHTML=`<div id="twSettingsBox"><h1>settings -> Towers</h1><label><span>algorithm</span><select id="twAlg"><option value="smart">smart</option><option value="knn">knn indexing</option><option value="mingle">mingle</option></select></label><label><span>safe tiles (n_safe)</span><input id="twSafe" type="number" min="1" max="8" step="1"></label><button id="twSettingsSave">save</button><button id="twSettingsClose">close</button><div style="clear:both"></div></div>`;
+ document.body.appendChild(wrap);
+ document.getElementById('twAlg').value=settings.algorithm;
+ document.getElementById('twSafe').value=settings.n_safe;
+ document.getElementById('twSettingsClose').onclick=()=>wrap.remove();
+ document.getElementById('twSettingsSave').onclick=()=>{
+  settings.algorithm=document.getElementById('twAlg').value;
+  settings.n_safe=clamp(document.getElementById('twSafe').value,1,8);
+  saveSettings();wrap.remove();forceNewPicks();
+ };
+ wrap.onclick=e=>{if(e.target===wrap)wrap.remove();};
+}
+
 function clear(){document.querySelectorAll('.twHL').forEach(e=>e.remove());}
+
 function findGrid(){
  const game=document.querySelector('[class*="towersGame"]'); if(!game)return[];
  let rows=[...game.querySelectorAll('[class*="towersGameRow"]')].filter(r=>{const x=r.getBoundingClientRect();return x.width>0&&x.height>0&&x.bottom>=0&&x.top<=innerHeight});
@@ -58,11 +98,57 @@ function targetRect(tile){
  const best=all.sort((a,b)=>{const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return (ra.width*ra.height)-(rb.width*rb.height)})[0]||tile;
  return best.getBoundingClientRect();
 }
-function gen(){enabled=true;picks=[];const g=findGrid();if(!g.length){out('Could not find Towers grid. Make sure the board is visible.');return;}for(let i=0;i<g.length;i++)picks.push(Math.floor(Math.random()*COLS));out();draw();}
-function draw(){clear(); if(!isTowers()||!enabled)return; const g=findGrid(); if(!g.length){out('Could not find grid when drawing.');return;} if(!picks.length){out('Click Generate ESP first.');return;}
- for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=targetRect(tile),w=b.width+4,h=b.height+4,box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
+function tileNum(tile){return ((tile.innerText||tile.textContent||'').match(/\d+\.\d{2}/)||[''])[0];}
+function boardState(grid){return grid.map(r=>r.map(tileNum).join(',')).join('|');}
+
+function chooseCol(row,prev){
+ if(settings.algorithm==='smart'){
+  let c=Math.floor(Math.random()*COLS);
+  if(prev!==undefined&&c===prev)c=(c+1+Math.floor(Math.random()*2))%COLS;
+  return c;
+ }
+ if(settings.algorithm==='knn'){
+  const hist=JSON.parse(localStorage.getItem('tw_knn_hist')||'{}');
+  const scores=[0,1,2].map(c=>hist[`${row}:${c}`]||0);
+  const max=Math.max(...scores); const best=scores.map((s,i)=>s===max?i:null).filter(x=>x!==null);
+  return best[Math.floor(Math.random()*best.length)]??Math.floor(Math.random()*COLS);
+ }
+ // mingle = smart + knn + random mix
+ return Math.random()<.5?chooseSmart(row,prev):chooseKnn(row);
 }
-function reset(){clear();picks=[];document.getElementById('twPanel')?.remove();}
-setTimeout(panel,1000); addEventListener('resize',draw); addEventListener('scroll',draw,true);
-setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;reset();setTimeout(panel,700);return;}if(isTowers()&&!document.getElementById('twPanel'))panel();if(isTowers()&&picks.length&&enabled)draw();},800);
+function chooseSmart(row,prev){let c=Math.floor(Math.random()*COLS);if(prev!==undefined&&c===prev)c=(c+1+Math.floor(Math.random()*2))%COLS;return c;}
+function chooseKnn(row){const hist=JSON.parse(localStorage.getItem('tw_knn_hist')||'{}');const scores=[0,1,2].map(c=>hist[`${row}:${c}`]||0);const max=Math.max(...scores);const best=scores.map((s,i)=>s===max?i:null).filter(x=>x!==null);return best[Math.floor(Math.random()*best.length)]??Math.floor(Math.random()*COLS);}
+function makePicks(rowCount){picks=[];let prev;for(let i=0;i<rowCount;i++){const c=chooseCol(i,prev);picks.push(c);prev=c;}}
+
+function forceNewPicks(){
+ enabled=true;autoStarted=true;
+ const g=findGrid(); if(!g.length){out('Could not find Towers grid. Make sure the board is visible.');return;}
+ makePicks(g.length); lastBoardState=boardState(g); out('New ESP generated.'); draw();
+}
+function gen(){forceNewPicks();}
+
+function draw(){
+ clear(); if(!isTowers()||!enabled)return;
+ const g=findGrid(); if(!g.length){out('Could not find grid when drawing.');return;} if(!picks.length){out('Waiting for auto ESP...');return;}
+ const nSafe=clamp(settings.n_safe,1,Math.min(8,g.length));
+ const start=Math.max(0,g.length-nSafe);
+ for(let r=start;r<g.length;r++){
+  const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue;
+  const b=targetRect(tile),w=72,h=30,box=document.createElement('div');
+  box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);
+ }
+ out();
+}
+
+function autoDraw(){
+ if(!isTowers())return;
+ const g=findGrid(); if(!g.length)return;
+ const sig=boardState(g);
+ if(!autoStarted){autoStarted=true;enabled=true;makePicks(g.length);lastBoardState=sig;draw();return;}
+ if(sig!==lastBoardState&&sig.split('|').length===lastBoardState.split('|').length){makePicks(g.length);lastBoardState=sig;draw();out('New/changed game detected. ESP regenerated.');return;}
+}
+function reset(){clear();picks=[];autoStarted=false;lastBoardState='';document.getElementById('twPanel')?.remove();document.getElementById('twSettings')?.remove();}
+setTimeout(()=>{panel();autoDraw();},1000);
+addEventListener('resize',draw);addEventListener('scroll',draw,true);
+setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;reset();setTimeout(()=>{panel();autoDraw();},700);return;}if(isTowers()&&!document.getElementById('twPanel'))panel();autoDraw();if(isTowers()&&picks.length&&enabled)draw();},800);
 })();

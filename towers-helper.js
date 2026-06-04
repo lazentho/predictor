@@ -4,7 +4,7 @@
 // Horizon visual helper loaded from GitHub.
 // Uses visible page data only. No cookies, no server, no auto-click.
 
-const VERSION='2.4';
+const VERSION='2.15';
 const COLS=3;
 const STORE='tw_settings_v1';
 const SLIDE_HIST='nx_slide_history_v3';
@@ -94,7 +94,7 @@ css(`
     z-index: 999999991;
     pointer-events: none;
     border: 2px solid #39FF14;
-    border-radius: 12px;
+    border-radius: 8px;
     box-shadow: 0 0 5px #39FF14, 0 0 12px #39FF14, 0 0 22px rgba(57,255,20,.8), inset 0 0 8px rgba(57,255,20,.35);
     background: rgba(57,255,20,.1);
   }
@@ -159,48 +159,24 @@ css(`
     font-family: Consolas, 'Courier New', monospace;
   }
   #twSettingsBox option { background: #001208; color: #39FF14; }
-  #twSettingsButtons {
-    display: flex;
-    gap: 10px;
-    margin-top: 22px;
-  }
+  #twSettingsButtons { display: flex; gap: 10px; margin-top: 22px; }
   #twSettingsSave {
-    flex: 1;
-    padding: 10px;
-    background: rgba(57,255,20,.12);
-    color: #39FF14;
-    border: 1px solid rgba(57,255,20,.6);
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: Consolas, 'Courier New', monospace;
+    flex: 1; padding: 10px; background: rgba(57,255,20,.12); color: #39FF14;
+    border: 1px solid rgba(57,255,20,.6); border-radius: 7px; font-size: 13px;
+    font-weight: 600; cursor: pointer; font-family: Consolas, 'Courier New', monospace;
     transition: background .15s;
   }
   #twSettingsSave:hover { background: rgba(57,255,20,.22); }
   #twSettingsClose {
-    flex: 1;
-    padding: 10px;
-    background: transparent;
-    color: rgba(57,255,20,.5);
-    border: 1px solid rgba(57,255,20,.25);
-    border-radius: 7px;
-    font-size: 13px;
-    cursor: pointer;
-    font-family: Consolas, 'Courier New', monospace;
-    transition: background .15s;
+    flex: 1; padding: 10px; background: transparent; color: rgba(57,255,20,.5);
+    border: 1px solid rgba(57,255,20,.25); border-radius: 7px; font-size: 13px;
+    cursor: pointer; font-family: Consolas, 'Courier New', monospace; transition: background .15s;
   }
   #twSettingsClose:hover { background: rgba(57,255,20,.06); color: #39FF14; }
   #nxSlideBox {
-    margin-top: 12px;
-    padding: 10px 12px;
-    border: 1px solid rgba(57,255,20,.25);
-    border-radius: 8px;
-    background: rgba(0,0,0,.4);
-    font-size: 11px;
-    line-height: 1.6;
-    color: rgba(57,255,20,.75);
-    white-space: pre-wrap;
+    margin-top: 12px; padding: 10px 12px; border: 1px solid rgba(57,255,20,.25);
+    border-radius: 8px; background: rgba(0,0,0,.4); font-size: 11px; line-height: 1.6;
+    color: rgba(57,255,20,.75); white-space: pre-wrap;
   }
 `);
 
@@ -295,14 +271,21 @@ function slideLatestItems(){
   return items.sort((a,b)=>a.x-b.x);
 }
 
-function slideBetColumns(){
-  const els=[...document.querySelectorAll('[class*="slidePlayersColumn"]')];
+function slideBetTargets(){
+  const cols=[...document.querySelectorAll('[class*="slidePlayersColumn"]')];
   const items=[];
-  for(const el of els){
-    const r=el.getBoundingClientRect();
-    if(r.width<120||r.height<45||r.top<250||r.top>window.innerHeight)continue;
-    const color=detectSlideColor(el);
-    if(['yellow','red','purple'].includes(color))items.push({el,color,x:Math.round(r.left),y:Math.round(r.top)});
+  for(const col of cols){
+    const cr=col.getBoundingClientRect();
+    if(cr.width<120||cr.height<45||cr.top<250||cr.top>window.innerHeight)continue;
+    const color=detectSlideColor(col);
+    if(!['yellow','red','purple'].includes(color))continue;
+
+    const target=col.querySelector('[class*="slidePlayersColumnBet"] button')||col.querySelector('[class*="slidePlayersColumnBet"]')||col.querySelector('button');
+    if(!target)continue;
+
+    const r=target.getBoundingClientRect();
+    if(r.width<60||r.height<20)continue;
+    items.push({el:target,color,x:Math.round(r.left),y:Math.round(r.top)});
   }
   return items.sort((a,b)=>a.x-b.x);
 }
@@ -310,8 +293,8 @@ function slideBetColumns(){
 function highlightSlideColor(color){
   clearSlideHighlights();
   if(!isSlide()||!color||color==='none')return;
-  const cols=slideBetColumns().filter(x=>x.color===color);
-  for(const item of cols){
+  const targets=slideBetTargets().filter(x=>x.color===color);
+  for(const item of targets){
     const r=item.el.getBoundingClientRect();
     const box=document.createElement('div');
     box.className='nxSlideHL';
@@ -343,7 +326,7 @@ function updateSlideMath(){
   const yellow=count('yellow'),red=count('red'),purple=count('purple');
   const best=[['yellow',yellow],['red',red],['purple',purple]].sort((a,b)=>b[1]-a[1])[0]?.[0]||'none';
   highlightSlideColor(best);
-  box.textContent=`Saved: ${total} rounds\n\nYellow  ${yellow}  (${pct('yellow').toFixed(1)}%)\nRed     ${red}  (${pct('red').toFixed(1)}%)\nPurple  ${purple}  (${pct('purple').toFixed(1)}%)\n\nHighlighting: ${best}\n\n— history only, not a prediction —`;
+  box.textContent=`Saved: ${total} rounds\n\nYellow  ${yellow}  (${pct('yellow').toFixed(1)}%)\nRed     ${red}  (${pct('red').toFixed(1)}%)\nPurple  ${purple}  (${pct('purple').toFixed(1)}%)\n\nHighlighting button: ${best}\n\n— history only, not a prediction —`;
 }
 
 function findGrid(){
@@ -413,7 +396,6 @@ function resetPage(){
 }
 
 setTimeout(()=>{panel();autoDraw();updateSlideMath();},1000);
-
 addEventListener('resize',()=>{draw();updateSlideMath();});
 addEventListener('scroll',()=>{draw();updateSlideMath();},true);
 

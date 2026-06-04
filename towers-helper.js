@@ -15,7 +15,7 @@ css(`
 #twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px}#twPanel p{margin:6px 0;font-size:13px;line-height:1.35}
 #twPanel button{width:100%;padding:9px;margin-top:8px;border:0;border-radius:8px;background:#39FF14;color:#000;font-weight:bold;cursor:pointer}#twPanel button:hover{filter:brightness(1.1)}
 #twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#ddd;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto}
-.twWarn{color:#ffcc00;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:9px;box-shadow:0 0 7px #39FF14,0 0 16px #39FF14,0 0 28px rgba(57,255,20,.75),inset 0 0 9px rgba(57,255,20,.38);background:rgba(57,255,20,.13)}
+.twWarn{color:#ffcc00;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:7px;box-shadow:0 0 6px #39FF14,0 0 13px #39FF14,0 0 22px rgba(57,255,20,.7),inset 0 0 7px rgba(57,255,20,.35);background:rgba(57,255,20,.11)}
 `);
 
 function isTowers(){return location.href.includes('/towers');}
@@ -50,7 +50,7 @@ function getTiles(row){
 }
 function gen(){enabled=true;picks=[];const g=findGrid();if(!g.length){out('Could not find Towers grid. Make sure the board is visible.');return;}for(let i=0;i<g.length;i++)picks.push(Math.floor(Math.random()*COLS));out();draw();}
 function draw(){clear(); if(!isTowers()||!enabled)return; const g=findGrid(); if(!g.length){out('Could not find grid when drawing.');return;} if(!picks.length){out('Click Generate ESP first.');return;}
- for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=tile.getBoundingClientRect(),w=Math.max(60,b.width*.9),h=Math.max(28,b.height*.75),box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
+ for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=tile.getBoundingClientRect(),w=Math.min(76,Math.max(50,b.width*.55)),h=Math.min(30,Math.max(24,b.height*.45)),box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
 }
 function reset(){clear();picks=[];document.getElementById('twPanel')?.remove();}
 setTimeout(panel,1000); addEventListener('resize',draw); addEventListener('scroll',draw,true);

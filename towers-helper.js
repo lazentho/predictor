@@ -4,7 +4,7 @@
 // Safe Towers visual helper loaded from GitHub.
 // Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
 
-const VERSION='1.5';
+const VERSION='1.6';
 const COLS=3;
 const STORE='tw_settings_v1';
 let picks=[];
@@ -23,16 +23,16 @@ function saveSettings(){localStorage.setItem(STORE,JSON.stringify(settings));}
 
 function css(s){const e=document.createElement('style');e.textContent=s;document.head.appendChild(e);}
 css(`
-#twPanel{position:fixed;top:90px;right:20px;z-index:999999999;width:290px;background:rgba(5,8,20,.97);color:white;border:2px solid #39FF14;border-radius:14px;padding:14px;font-family:Arial,sans-serif;box-shadow:0 0 22px rgba(0,0,0,.65)}
-#twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px}#twPanel p{margin:6px 0;font-size:13px;line-height:1.35}
-#twPanel button{width:100%;padding:9px;margin-top:8px;border:0;border-radius:8px;background:#39FF14;color:#000;font-weight:bold;cursor:pointer}#twPanel button:hover{filter:brightness(1.1)}
-#twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#ddd;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto}
-.twWarn{color:#ffcc00;font-size:12px!important}.twVer{color:#9aa8ff!important;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
-#twSettings{position:fixed;inset:0;z-index:1000000000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:white}
-#twSettingsBox{width:680px;max-width:92vw;background:#120d1b;border:3px solid #8b3fb0;border-radius:34px;padding:34px 40px;box-shadow:0 0 30px rgba(0,0,0,.7)}
-#twSettingsBox h1{margin:0 0 28px;font-size:36px;color:white}#twSettingsBox label{display:flex;align-items:center;justify-content:space-between;margin:22px 0;font-size:18px;color:#d8d1df}
-#twSettingsBox select,#twSettingsBox input{width:140px;background:#2a1938;color:white;border:1px solid #8b3fb0;border-radius:7px;padding:10px 12px;font-size:16px;outline:none}
-#twSettingsSave{float:right;width:110px!important;background:#8b3fb0!important;color:white!important;border-radius:12px!important;font-size:16px!important}#twSettingsClose{float:right;width:110px!important;margin-right:10px;background:#2a1938!important;color:white!important;border:1px solid #8b3fb0!important;border-radius:12px!important;font-size:16px!important}
+#twPanel{position:fixed;top:90px;right:20px;z-index:999999999;width:290px;background:linear-gradient(180deg,rgba(0,18,8,.98),rgba(0,8,4,.98));color:#d7ffe0;border:2px solid #39FF14;border-radius:14px;padding:14px;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 18px rgba(57,255,20,.45),inset 0 0 18px rgba(57,255,20,.08)}
+#twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px;text-shadow:0 0 8px #39FF14;letter-spacing:.5px}#twPanel p{margin:6px 0;font-size:13px;line-height:1.35;color:#d7ffe0}
+#twPanel button{width:100%;padding:9px;margin-top:8px;border:1px solid #39FF14;border-radius:8px;background:#39FF14;color:#001900;font-weight:bold;cursor:pointer;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 10px rgba(57,255,20,.35)}#twPanel button:hover{filter:brightness(1.1);box-shadow:0 0 18px rgba(57,255,20,.7)}
+#twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#baffc4;background:rgba(0,0,0,.62);border:1px solid rgba(57,255,20,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto;text-shadow:0 0 4px rgba(57,255,20,.25)}
+.twWarn{color:#ffea00;font-size:12px!important;text-shadow:0 0 5px #ffea00}.twVer{color:#39FF14!important;font-size:12px!important;text-shadow:0 0 6px #39FF14}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
+#twSettings{position:fixed;inset:0;z-index:1000000000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;font-family:Consolas,'Courier New',monospace;color:#d7ffe0;backdrop-filter:blur(2px)}
+#twSettingsBox{width:680px;max-width:92vw;background:linear-gradient(180deg,#001408,#020602);border:3px solid #39FF14;border-radius:28px;padding:34px 40px;box-shadow:0 0 28px rgba(57,255,20,.55),inset 0 0 28px rgba(57,255,20,.08)}
+#twSettingsBox h1{margin:0 0 28px;font-size:36px;color:#39FF14;text-shadow:0 0 10px #39FF14;letter-spacing:.5px}#twSettingsBox label{display:flex;align-items:center;justify-content:space-between;margin:22px 0;font-size:18px;color:#d7ffe0}
+#twSettingsBox select,#twSettingsBox input{width:140px;background:#000;color:#39FF14;border:1px solid #39FF14;border-radius:7px;padding:10px 12px;font-size:16px;outline:none;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 10px rgba(57,255,20,.25)}
+#twSettingsBox option{background:#001408;color:#39FF14}#twSettingsSave{float:right;width:110px!important;background:#39FF14!important;color:#001900!important;border:1px solid #39FF14!important;border-radius:12px!important;font-size:16px!important}#twSettingsClose{float:right;width:110px!important;margin-right:10px;background:#001408!important;color:#39FF14!important;border:1px solid #39FF14!important;border-radius:12px!important;font-size:16px!important}
 `);
 
 function isTowers(){return location.href.includes('/towers');}

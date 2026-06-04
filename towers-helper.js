@@ -1,12 +1,14 @@
 (function(){
 'use strict';
 
-// Safe Towers visual helper loaded from GitHub.
-// Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
+// Safe visual helper loaded from GitHub.
+// Uses visible page data only. No cookies, no server, no auto-click.
 
-const VERSION='1.9';
+const VERSION='2.0';
 const COLS=3;
 const STORE='tw_settings_v1';
+const SLIDE_HIST='nx_slide_history_v1';
+const SLIDE_MAX=250;
 let picks=[];
 let enabled=true;
 let lastUrl=location.href;
@@ -14,6 +16,7 @@ let autoStarted=false;
 let lastBoardState='';
 let lastCleanState='';
 let lastHadReveal=false;
+let lastSlideKey='';
 let settings=loadSettings();
 
 function loadSettings(){try{return Object.assign({algorithm:'smart',n_safe:8},JSON.parse(localStorage.getItem(STORE)||'{}'));}catch(e){return {algorithm:'smart',n_safe:8};}}
@@ -30,20 +33,30 @@ css(`
 #twSettingsBox h1{margin:0 0 28px;font-size:36px;color:#39FF14;text-shadow:0 0 10px #39FF14;letter-spacing:.5px}#twSettingsBox label{display:flex;align-items:center;justify-content:space-between;margin:22px 0;font-size:18px;color:#d7ffe0}
 #twSettingsBox select,#twSettingsBox input{width:140px;background:#000;color:#39FF14;border:1px solid #39FF14;border-radius:7px;padding:10px 12px;font-size:16px;outline:none;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 10px rgba(57,255,20,.25)}
 #twSettingsBox option{background:#001408;color:#39FF14}#twSettingsSave{float:right;width:110px!important;background:#39FF14!important;color:#001900!important;border:1px solid #39FF14!important;border-radius:12px!important;font-size:16px!important}#twSettingsClose{float:right;width:110px!important;margin-right:10px;background:#001408!important;color:#39FF14!important;border:1px solid #39FF14!important;border-radius:12px!important;font-size:16px!important}
+#nxSlideBox{margin-top:10px;padding:9px;border:1px solid rgba(57,255,20,.35);border-radius:8px;background:rgba(0,0,0,.55);font-size:12px;line-height:1.35;color:#baffc4;white-space:pre-wrap;text-shadow:0 0 4px rgba(57,255,20,.25)}
 `);
 
 function isTowers(){return location.href.includes('/towers');}
-function menuTitle(){return isTowers()?'Towers ESP':'Nexus';}
+function isSlide(){return location.href.includes('/slide');}
+function menuTitle(){return isTowers()?'Towers ESP':isSlide()?'Slide Math':'Nexus';}
 function updateMenuTitle(){const t=document.getElementById('twTitle');if(t)t.textContent=menuTitle();}
 function clamp(v,min,max){v=Number(v);if(!Number.isFinite(v))v=min;return Math.max(min,Math.min(max,Math.floor(v)));}
 function clear(){document.querySelectorAll('.twHL').forEach(e=>e.remove());}
 
 function panel(){
- if(document.getElementById('twPanel')){updateMenuTitle();return;}
+ if(document.getElementById('twPanel')){updateMenuTitle();ensureSlideBox();return;}
  const p=document.createElement('div');p.id='twPanel';
  p.innerHTML=`<h2 id="twTitle">${menuTitle()}</h2><p>Version: <b>${VERSION}</b></p><button id="twSet">Settings</button>`;
  document.body.appendChild(p);
  document.getElementById('twSet').onclick=openSettings;
+ ensureSlideBox();
+}
+
+function ensureSlideBox(){
+ const p=document.getElementById('twPanel'); if(!p)return;
+ const old=document.getElementById('nxSlideBox');
+ if(!isSlide()){old?.remove();return;}
+ if(!old){const b=document.createElement('div');b.id='nxSlideBox';b.textContent='Reading slide history...';p.appendChild(b);}
 }
 
 function openSettings(){
@@ -56,6 +69,51 @@ function openSettings(){
  document.getElementById('twSettingsClose').onclick=()=>wrap.remove();
  document.getElementById('twSettingsSave').onclick=()=>{settings.algorithm=document.getElementById('twAlg').value;settings.n_safe=clamp(document.getElementById('twSafe').value,1,8);saveSettings();wrap.remove();forceNewPicks();};
  wrap.onclick=e=>{if(e.target===wrap)wrap.remove();};
+}
+
+function slideHist(){try{return JSON.parse(localStorage.getItem(SLIDE_HIST)||'[]');}catch(e){return[];}}
+function saveSlideHist(h){localStorage.setItem(SLIDE_HIST,JSON.stringify(h.slice(-SLIDE_MAX)));}
+function slideVisibleMultipliers(){
+ const els=[...document.querySelectorAll('div,span,button')];
+ const vals=[];
+ for(const el of els){
+  const txt=(el.innerText||el.textContent||'').trim();
+  if(!/^\d+(\.\d+)?x$/i.test(txt))continue;
+  const r=el.getBoundingClientRect();
+  if(r.width<15||r.height<10||r.top<0||r.top>220)continue;
+  vals.push({v:parseFloat(txt),x:Math.round(r.left),y:Math.round(r.top)});
+ }
+ vals.sort((a,b)=>a.x-b.x);
+ const unique=[];
+ for(const v of vals){if(!unique.find(u=>Math.abs(u.x-v.x)<8&&Math.abs(u.y-v.y)<8))unique.push(v);}
+ return unique.map(x=>x.v);
+}
+function updateSlideMath(){
+ if(!isSlide())return;
+ ensureSlideBox();
+ const box=document.getElementById('nxSlideBox'); if(!box)return;
+ const seen=slideVisibleMultipliers();
+ if(seen.length){
+  const key=seen.join('|');
+  if(key!==lastSlideKey){
+   lastSlideKey=key;
+   const h=slideHist();
+   for(const v of seen)h.push({v,time:Date.now()});
+   saveSlideHist(h);
+  }
+ }
+ const h=slideHist();
+ const total=h.length;
+ const opts=[14,2,2];
+ let text=`Visible history saved: ${total}\n`;
+ const counts={};
+ for(const r of h)counts[r.v]=(counts[r.v]||0)+1;
+ const chance=v=>total?((counts[v]||0)/total*100):0;
+ text+=`\nBreak-even math:\n`;
+ text+=`14x needs ${(100/14).toFixed(2)}% | seen ${chance(14).toFixed(2)}%\n`;
+ text+=`2x needs ${(100/2).toFixed(2)}% | seen ${chance(2).toFixed(2)}%\n`;
+ text+=`\nHistory only. Not a prediction.`;
+ box.textContent=text;
 }
 
 function findGrid(){
@@ -97,8 +155,8 @@ function autoDraw(){
  if(!lastHadReveal&&lastCleanState&&cleanSig!==lastCleanState){makePicks(g.length);lastBoardState=boardState(g);lastCleanState=cleanSig;draw();return;}
  draw();
 }
-function resetPage(){clear();picks=[];autoStarted=false;lastBoardState='';lastCleanState='';lastHadReveal=false;document.getElementById('twSettings')?.remove();}
-setTimeout(()=>{panel();autoDraw();},1000);
+function resetPage(){clear();picks=[];autoStarted=false;lastBoardState='';lastCleanState='';lastHadReveal=false;lastSlideKey='';document.getElementById('twSettings')?.remove();}
+setTimeout(()=>{panel();autoDraw();updateSlideMath();},1000);
 addEventListener('resize',draw);addEventListener('scroll',draw,true);
-setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;resetPage();setTimeout(()=>{panel();autoDraw();},700);return;}panel();autoDraw();},800);
+setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;resetPage();setTimeout(()=>{panel();autoDraw();updateSlideMath();},700);return;}panel();autoDraw();updateSlideMath();},800);
 })();

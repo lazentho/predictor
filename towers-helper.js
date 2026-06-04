@@ -4,10 +4,10 @@
 // Safe visual helper loaded from GitHub.
 // Uses visible page data only. No cookies, no server, no auto-click.
 
-const VERSION='2.0';
+const VERSION='2.1';
 const COLS=3;
 const STORE='tw_settings_v1';
-const SLIDE_HIST='nx_slide_history_v1';
+const SLIDE_HIST='nx_slide_history_v2';
 const SLIDE_MAX=250;
 let picks=[];
 let enabled=true;
@@ -24,7 +24,7 @@ function saveSettings(){localStorage.setItem(STORE,JSON.stringify(settings));}
 function css(s){const e=document.createElement('style');e.textContent=s;document.head.appendChild(e);}
 
 css(`
-#twPanel{position:fixed;top:90px;right:20px;z-index:999999999;width:230px;background:linear-gradient(180deg,rgba(0,18,8,.98),rgba(0,8,4,.98));color:#d7ffe0;border:2px solid #39FF14;border-radius:14px;padding:14px;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 18px rgba(57,255,20,.45),inset 0 0 18px rgba(57,255,20,.08)}
+#twPanel{position:fixed;top:90px;right:20px;z-index:999999999;width:245px;background:linear-gradient(180deg,rgba(0,18,8,.98),rgba(0,8,4,.98));color:#d7ffe0;border:2px solid #39FF14;border-radius:14px;padding:14px;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 18px rgba(57,255,20,.45),inset 0 0 18px rgba(57,255,20,.08)}
 #twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px;text-shadow:0 0 8px #39FF14;letter-spacing:.5px}#twPanel p{margin:6px 0;font-size:12px;color:#39FF14;text-shadow:0 0 6px #39FF14}
 #twPanel button{width:100%;padding:10px;margin-top:10px;border:1px solid #39FF14;border-radius:8px;background:#39FF14;color:#001900;font-weight:bold;cursor:pointer;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 10px rgba(57,255,20,.35)}#twPanel button:hover{filter:brightness(1.1);box-shadow:0 0 18px rgba(57,255,20,.7)}
 .twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
@@ -56,7 +56,7 @@ function ensureSlideBox(){
  const p=document.getElementById('twPanel'); if(!p)return;
  const old=document.getElementById('nxSlideBox');
  if(!isSlide()){old?.remove();return;}
- if(!old){const b=document.createElement('div');b.id='nxSlideBox';b.textContent='Reading slide history...';p.appendChild(b);}
+ if(!old){const b=document.createElement('div');b.id='nxSlideBox';b.textContent='Reading color history...';p.appendChild(b);}
 }
 
 function openSettings(){
@@ -73,47 +73,59 @@ function openSettings(){
 
 function slideHist(){try{return JSON.parse(localStorage.getItem(SLIDE_HIST)||'[]');}catch(e){return[];}}
 function saveSlideHist(h){localStorage.setItem(SLIDE_HIST,JSON.stringify(h.slice(-SLIDE_MAX)));}
-function slideVisibleMultipliers(){
- const els=[...document.querySelectorAll('div,span,button')];
- const vals=[];
- for(const el of els){
-  const txt=(el.innerText||el.textContent||'').trim();
-  if(!/^\d+(\.\d+)?x$/i.test(txt))continue;
-  const r=el.getBoundingClientRect();
-  if(r.width<15||r.height<10||r.top<0||r.top>220)continue;
-  vals.push({v:parseFloat(txt),x:Math.round(r.left),y:Math.round(r.top)});
+function detectSlideColor(el){
+ const chain=[];let n=el;
+ for(let i=0;i<5&&n;i++,n=n.parentElement)chain.push(n);
+ const txt=chain.map(x=>(x.className||'')+' '+(x.getAttribute?.('style')||'')).join(' ').toLowerCase();
+ if(txt.includes('yellow'))return'yellow';
+ if(txt.includes('red'))return'red';
+ if(txt.includes('purple'))return'purple';
+ const st=getComputedStyle(el); const bg=st.backgroundColor||'';
+ const m=bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+ if(m){const r=+m[1],g=+m[2],b=+m[3];
+  if(r>180&&g>110&&b<80)return'yellow';
+  if(r>180&&g<90&&b>80)return'red';
+  if(r>90&&b>130)return'purple';
  }
- vals.sort((a,b)=>a.x-b.x);
+ return'unknown';
+}
+function slideVisibleColorItems(){
+ const els=[...document.querySelectorAll('[class*="slidePlayersColumn"], [class*="slide-module"]')];
+ const items=[];
+ for(const el of els){
+  const r=el.getBoundingClientRect();
+  if(r.width<30||r.height<30||r.top<0||r.top>window.innerHeight)continue;
+  const color=detectSlideColor(el);
+  if(!['yellow','red','purple'].includes(color))continue;
+  const text=(el.innerText||el.textContent||'').trim();
+  const multi=(text.match(/\d+(?:\.\d+)?x/i)||[''])[0];
+  items.push({color,multi,x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)});
+ }
+ items.sort((a,b)=>a.x-b.x||a.y-b.y);
  const unique=[];
- for(const v of vals){if(!unique.find(u=>Math.abs(u.x-v.x)<8&&Math.abs(u.y-v.y)<8))unique.push(v);}
- return unique.map(x=>x.v);
+ for(const it of items){if(!unique.find(u=>u.color===it.color&&Math.abs(u.x-it.x)<12&&Math.abs(u.y-it.y)<12))unique.push(it);}
+ return unique;
 }
 function updateSlideMath(){
  if(!isSlide())return;
  ensureSlideBox();
  const box=document.getElementById('nxSlideBox'); if(!box)return;
- const seen=slideVisibleMultipliers();
+ const seen=slideVisibleColorItems();
  if(seen.length){
-  const key=seen.join('|');
+  const key=seen.map(x=>`${x.color}:${x.x}:${x.y}:${x.multi}`).join('|');
   if(key!==lastSlideKey){
    lastSlideKey=key;
    const h=slideHist();
-   for(const v of seen)h.push({v,time:Date.now()});
+   for(const item of seen)h.push({color:item.color,multi:item.multi,time:Date.now()});
    saveSlideHist(h);
   }
  }
- const h=slideHist();
- const total=h.length;
- const opts=[14,2,2];
- let text=`Visible history saved: ${total}\n`;
- const counts={};
- for(const r of h)counts[r.v]=(counts[r.v]||0)+1;
- const chance=v=>total?((counts[v]||0)/total*100):0;
- text+=`\nBreak-even math:\n`;
- text+=`14x needs ${(100/14).toFixed(2)}% | seen ${chance(14).toFixed(2)}%\n`;
- text+=`2x needs ${(100/2).toFixed(2)}% | seen ${chance(2).toFixed(2)}%\n`;
- text+=`\nHistory only. Not a prediction.`;
- box.textContent=text;
+ const h=slideHist(); const total=h.length;
+ const count=c=>h.filter(x=>x.color===c).length;
+ const pct=c=>total?(count(c)/total*100):0;
+ const yellow=count('yellow'),red=count('red'),purple=count('purple');
+ const best=[['yellow',yellow],['red',red],['purple',purple]].sort((a,b)=>b[1]-a[1])[0]?.[0]||'none';
+ box.textContent=`Color history saved: ${total}\n\nYellow: ${yellow} (${pct('yellow').toFixed(1)}%)\nRed: ${red} (${pct('red').toFixed(1)}%)\nPurple: ${purple} (${pct('purple').toFixed(1)}%)\n\nMost seen color: ${best}\n\nHistory only. Not a prediction.`;
 }
 
 function findGrid(){

@@ -15,7 +15,7 @@ css(`
 #twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px}#twPanel p{margin:6px 0;font-size:13px;line-height:1.35}
 #twPanel button{width:100%;padding:9px;margin-top:8px;border:0;border-radius:8px;background:#39FF14;color:#000;font-weight:bold;cursor:pointer}#twPanel button:hover{filter:brightness(1.1)}
 #twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#ddd;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto}
-.twWarn{color:#ffcc00;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 5px #39FF14,0 0 11px #39FF14,0 0 18px rgba(57,255,20,.7),inset 0 0 6px rgba(57,255,20,.35);background:rgba(57,255,20,.10)}
+.twWarn{color:#ffcc00;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
 `);
 
 function isTowers(){return location.href.includes('/towers');}
@@ -44,18 +44,22 @@ function findGrid(){
  return grid;
 }
 function getTiles(row){
+ const containers=[...row.querySelectorAll('[class*="towersGameRowContainer"]')].filter(e=>{const r=e.getBoundingClientRect();return r.width>10&&r.height>10}); if(containers.length>=3)return containers;
+ const buttons=[...row.querySelectorAll('[class*="towersGameButton"]')].filter(e=>{const r=e.getBoundingClientRect();return r.width>10&&r.height>10}); if(buttons.length>=3)return buttons;
  const children=[...row.children].filter(e=>{const r=e.getBoundingClientRect();return r.width>10&&r.height>10}); if(children.length>=3)return children;
  const cand=[...row.querySelectorAll('button,div,span')].filter(e=>{const r=e.getBoundingClientRect(),txt=(e.innerText||e.textContent||'').trim();return r.width>=20&&r.width<=180&&r.height>=15&&r.height<=90&&/\d+\.\d{2}/.test(txt)});
  const u=[]; for(const e of cand){const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;if(!u.find(o=>{const q=o.getBoundingClientRect(),ox=q.left+q.width/2,oy=q.top+q.height/2;return Math.abs(x-ox)<8&&Math.abs(y-oy)<8}))u.push(e);} return u;
 }
 function targetRect(tile){
+ const btn=tile.matches?.('[class*="towersGameButton"]')?tile:tile.querySelector?.('[class*="towersGameButton"]');
+ if(btn)return btn.getBoundingClientRect();
  const all=[tile,...tile.querySelectorAll('button,div,span')].filter(e=>{const r=e.getBoundingClientRect(),txt=(e.innerText||e.textContent||'').trim();return r.width>=35&&r.width<=95&&r.height>=18&&r.height<=45&&/\d+\.\d{2}/.test(txt)});
  const best=all.sort((a,b)=>{const ra=a.getBoundingClientRect(),rb=b.getBoundingClientRect();return (ra.width*ra.height)-(rb.width*rb.height)})[0]||tile;
  return best.getBoundingClientRect();
 }
 function gen(){enabled=true;picks=[];const g=findGrid();if(!g.length){out('Could not find Towers grid. Make sure the board is visible.');return;}for(let i=0;i<g.length;i++)picks.push(Math.floor(Math.random()*COLS));out();draw();}
 function draw(){clear(); if(!isTowers()||!enabled)return; const g=findGrid(); if(!g.length){out('Could not find grid when drawing.');return;} if(!picks.length){out('Click Generate ESP first.');return;}
- for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=targetRect(tile),w=Math.max(42,b.width+8),h=Math.max(24,b.height+6),box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
+ for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=targetRect(tile),w=b.width+4,h=b.height+4,box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
 }
 function reset(){clear();picks=[];document.getElementById('twPanel')?.remove();}
 setTimeout(panel,1000); addEventListener('resize',draw); addEventListener('scroll',draw,true);

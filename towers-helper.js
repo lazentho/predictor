@@ -4,7 +4,7 @@
 // Safe Towers visual helper loaded from GitHub.
 // Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
 
-const VERSION='1.8';
+const VERSION='1.9';
 const COLS=3;
 const STORE='tw_settings_v1';
 let picks=[];
@@ -12,6 +12,8 @@ let enabled=true;
 let lastUrl=location.href;
 let autoStarted=false;
 let lastBoardState='';
+let lastCleanState='';
+let lastHadReveal=false;
 let settings=loadSettings();
 
 function loadSettings(){try{return Object.assign({algorithm:'smart',n_safe:8},JSON.parse(localStorage.getItem(STORE)||'{}'));}catch(e){return {algorithm:'smart',n_safe:8};}}
@@ -76,15 +78,27 @@ function targetRect(tile){
 }
 function tileNum(tile){return((tile.innerText||tile.textContent||'').match(/\d+\.\d{2}/)||[''])[0];}
 function boardState(grid){return grid.map(r=>r.map(tileNum).join(',')).join('|');}
+function revealedCount(grid){let n=0;for(const row of grid){for(const tile of row){if(!tileNum(tile))n++;}}return n;}
+function cleanBoardState(grid){return grid.map(r=>r.map(tileNum).join(',')).join('|');}
 function chooseSmart(row,prev){let c=Math.floor(Math.random()*COLS);if(prev!==undefined&&c===prev)c=(c+1+Math.floor(Math.random()*2))%COLS;return c;}
 function chooseKnn(row){const hist=JSON.parse(localStorage.getItem('tw_knn_hist')||'{}');const scores=[0,1,2].map(c=>hist[`${row}:${c}`]||0);const max=Math.max(...scores);const best=scores.map((s,i)=>s===max?i:null).filter(x=>x!==null);return best[Math.floor(Math.random()*best.length)]??Math.floor(Math.random()*COLS);}
 function chooseCol(row,prev){if(settings.algorithm==='smart')return chooseSmart(row,prev);if(settings.algorithm==='knn')return chooseKnn(row);return Math.random()<.5?chooseSmart(row,prev):chooseKnn(row);}
 function makePicks(rowCount){picks=[];let prev;for(let i=0;i<rowCount;i++){const c=chooseCol(i,prev);picks.push(c);prev=c;}}
-function forceNewPicks(){enabled=true;autoStarted=true;const g=findGrid();if(!g.length)return;makePicks(g.length);lastBoardState=boardState(g);draw();}
+function forceNewPicks(){enabled=true;autoStarted=true;const g=findGrid();if(!g.length)return;makePicks(g.length);lastBoardState=boardState(g);lastCleanState=cleanBoardState(g);lastHadReveal=revealedCount(g)>0;draw();}
 function draw(){clear();if(!isTowers()||!enabled)return;const g=findGrid();if(!g.length||!picks.length)return;const nSafe=clamp(settings.n_safe,1,Math.min(8,g.length));const start=Math.max(0,g.length-nSafe);for(let r=start;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)];if(!tile)continue;const b=targetRect(tile),w=72,h=30,box=document.createElement('div');box.className='twHL';box.style.left=`${b.left+b.width/2-w/2}px`;box.style.top=`${b.top+b.height/2-h/2}px`;box.style.width=`${w}px`;box.style.height=`${h}px`;document.body.appendChild(box);}}
-function autoDraw(){if(!isTowers())return;const g=findGrid();if(!g.length)return;const sig=boardState(g);if(!autoStarted){autoStarted=true;enabled=true;makePicks(g.length);lastBoardState=sig;draw();return;}if(sig!==lastBoardState&&sig.split('|').length===lastBoardState.split('|').length){makePicks(g.length);lastBoardState=sig;draw();}}
-function resetPage(){clear();picks=[];autoStarted=false;lastBoardState='';document.getElementById('twSettings')?.remove();}
+function autoDraw(){
+ if(!isTowers())return;
+ const g=findGrid();if(!g.length)return;
+ const reveal=revealedCount(g);
+ const cleanSig=cleanBoardState(g);
+ if(!autoStarted){autoStarted=true;enabled=true;makePicks(g.length);lastBoardState=boardState(g);lastCleanState=cleanSig;lastHadReveal=reveal>0;draw();return;}
+ if(reveal>0){lastHadReveal=true;draw();return;}
+ if(lastHadReveal&&reveal===0){makePicks(g.length);lastBoardState=boardState(g);lastCleanState=cleanSig;lastHadReveal=false;draw();return;}
+ if(!lastHadReveal&&lastCleanState&&cleanSig!==lastCleanState){makePicks(g.length);lastBoardState=boardState(g);lastCleanState=cleanSig;draw();return;}
+ draw();
+}
+function resetPage(){clear();picks=[];autoStarted=false;lastBoardState='';lastCleanState='';lastHadReveal=false;document.getElementById('twSettings')?.remove();}
 setTimeout(()=>{panel();autoDraw();},1000);
 addEventListener('resize',draw);addEventListener('scroll',draw,true);
-setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;resetPage();setTimeout(()=>{panel();autoDraw();},700);return;}panel();autoDraw();if(isTowers()&&picks.length&&enabled)draw();},800);
+setInterval(()=>{if(location.href!==lastUrl){lastUrl=location.href;resetPage();setTimeout(()=>{panel();autoDraw();},700);return;}panel();autoDraw();},800);
 })();

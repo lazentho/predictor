@@ -1,13 +1,13 @@
 (function(){
 'use strict';
 
-// Safe visual helper loaded from GitHub.
+// Horizon visual helper loaded from GitHub.
 // Uses visible page data only. No cookies, no server, no auto-click.
 
-const VERSION='2.2';
+const VERSION='2.3';
 const COLS=3;
 const STORE='tw_settings_v1';
-const SLIDE_HIST='nx_slide_history_v2';
+const SLIDE_HIST='nx_slide_history_v3';
 const SLIDE_MAX=250;
 let picks=[];
 let enabled=true;
@@ -28,7 +28,7 @@ css(`
 #twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px;text-shadow:0 0 8px #39FF14;letter-spacing:.5px}#twPanel p{margin:6px 0;font-size:12px;color:#39FF14;text-shadow:0 0 6px #39FF14}
 #twPanel button{width:100%;padding:10px;margin-top:10px;border:1px solid #39FF14;border-radius:8px;background:#39FF14;color:#001900;font-weight:bold;cursor:pointer;font-family:Consolas,'Courier New',monospace;box-shadow:0 0 10px rgba(57,255,20,.35)}#twPanel button:hover{filter:brightness(1.1);box-shadow:0 0 18px rgba(57,255,20,.7)}
 .twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
-.nxSlideHL{position:fixed;z-index:999999991;pointer-events:none;border:2px solid #39FF14;border-radius:8px;box-shadow:0 0 5px #39FF14,0 0 12px #39FF14,0 0 20px rgba(57,255,20,.8),inset 0 0 7px rgba(57,255,20,.35);background:rgba(57,255,20,.1)}
+.nxSlideHL{position:fixed;z-index:999999991;pointer-events:none;border:2px solid #39FF14;border-radius:12px;box-shadow:0 0 5px #39FF14,0 0 12px #39FF14,0 0 22px rgba(57,255,20,.8),inset 0 0 8px rgba(57,255,20,.35);background:rgba(57,255,20,.1)}
 #twSettings{position:fixed;inset:0;z-index:1000000000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;font-family:Consolas,'Courier New',monospace;color:#d7ffe0;backdrop-filter:blur(2px)}
 #twSettingsBox{width:680px;max-width:92vw;background:linear-gradient(180deg,#001408,#020602);border:3px solid #39FF14;border-radius:28px;padding:34px 40px;box-shadow:0 0 28px rgba(57,255,20,.55),inset 0 0 28px rgba(57,255,20,.08)}
 #twSettingsBox h1{margin:0 0 28px;font-size:36px;color:#39FF14;text-shadow:0 0 10px #39FF14;letter-spacing:.5px}#twSettingsBox label{display:flex;align-items:center;justify-content:space-between;margin:22px 0;font-size:18px;color:#d7ffe0}
@@ -82,45 +82,42 @@ function detectSlideColor(el){
  if(txt.includes('yellow'))return'yellow';
  if(txt.includes('red'))return'red';
  if(txt.includes('purple'))return'purple';
- const st=getComputedStyle(el); const bg=st.backgroundColor||'';
- const m=bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
- if(m){const r=+m[1],g=+m[2],b=+m[3];
-  if(r>180&&g>110&&b<90)return'yellow';
-  if(r>150&&g<110&&b<140)return'red';
-  if(r>90&&b>120)return'purple';
- }
  return'unknown';
 }
-function slideVisibleColorItems(){
- const els=[...document.querySelectorAll('.gameLatestItem,[data-color],[class*="slideGameTrackItem"],[class*="slidePlayersColumn"],[class*="slide-module"]')];
+function slideLatestItems(){
+ const els=[...document.querySelectorAll('.gameLatestItem')];
  const items=[];
  for(const el of els){
   const r=el.getBoundingClientRect();
-  if(r.width<20||r.height<14||r.top<0||r.top>window.innerHeight)continue;
+  if(r.width<15||r.height<10||r.top<0||r.top>180)continue;
   const color=detectSlideColor(el);
-  if(!['yellow','red','purple'].includes(color))continue;
-  const text=(el.innerText||el.textContent||'').trim();
-  const multi=(text.match(/\d+(?:\.\d+)?x/i)||[''])[0];
-  items.push({el,color,multi,x:Math.round(r.left),y:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)});
+  if(['yellow','red','purple'].includes(color))items.push({el,color,x:Math.round(r.left),y:Math.round(r.top)});
  }
- items.sort((a,b)=>a.x-b.x||a.y-b.y);
- const unique=[];
- for(const it of items){if(!unique.find(u=>u.el===it.el||u.color===it.color&&Math.abs(u.x-it.x)<10&&Math.abs(u.y-it.y)<10))unique.push(it);}
- return unique;
+ return items.sort((a,b)=>a.x-b.x);
 }
-function highlightSlideColor(color,items){
+function slideBetColumns(){
+ const els=[...document.querySelectorAll('[class*="slidePlayersColumn"]')];
+ const items=[];
+ for(const el of els){
+  const r=el.getBoundingClientRect();
+  if(r.width<120||r.height<45||r.top<250||r.top>window.innerHeight)continue;
+  const color=detectSlideColor(el);
+  if(['yellow','red','purple'].includes(color))items.push({el,color,x:Math.round(r.left),y:Math.round(r.top)});
+ }
+ return items.sort((a,b)=>a.x-b.x);
+}
+function highlightSlideColor(color){
  clearSlideHighlights();
- if(!color||color==='none')return;
- const targets=items.filter(x=>x.color===color);
- for(const item of targets){
+ if(!isSlide()||!color||color==='none')return;
+ const cols=slideBetColumns().filter(x=>x.color===color);
+ for(const item of cols){
   const r=item.el.getBoundingClientRect();
-  if(r.width<20||r.height<14||r.top<0||r.top>window.innerHeight)continue;
   const box=document.createElement('div');
   box.className='nxSlideHL';
-  box.style.left=`${r.left-4}px`;
-  box.style.top=`${r.top-4}px`;
-  box.style.width=`${r.width+8}px`;
-  box.style.height=`${r.height+8}px`;
+  box.style.left=`${r.left-6}px`;
+  box.style.top=`${r.top-6}px`;
+  box.style.width=`${r.width+12}px`;
+  box.style.height=`${r.height+12}px`;
   document.body.appendChild(box);
  }
 }
@@ -128,13 +125,13 @@ function updateSlideMath(){
  if(!isSlide()){clearSlideHighlights();return;}
  ensureSlideBox();
  const box=document.getElementById('nxSlideBox'); if(!box)return;
- const seen=slideVisibleColorItems();
+ const seen=slideLatestItems();
  if(seen.length){
-  const key=seen.map(x=>`${x.color}:${x.x}:${x.y}:${x.multi}`).join('|');
+  const key=seen.map(x=>`${x.color}:${x.x}:${x.y}`).join('|');
   if(key!==lastSlideKey){
    lastSlideKey=key;
    const h=slideHist();
-   for(const item of seen)h.push({color:item.color,multi:item.multi,time:Date.now()});
+   for(const item of seen)h.push({color:item.color,time:Date.now()});
    saveSlideHist(h);
   }
  }
@@ -143,8 +140,8 @@ function updateSlideMath(){
  const pct=c=>total?(count(c)/total*100):0;
  const yellow=count('yellow'),red=count('red'),purple=count('purple');
  const best=[['yellow',yellow],['red',red],['purple',purple]].sort((a,b)=>b[1]-a[1])[0]?.[0]||'none';
- highlightSlideColor(best,seen);
- box.textContent=`Color history saved: ${total}\n\nYellow: ${yellow} (${pct('yellow').toFixed(1)}%)\nRed: ${red} (${pct('red').toFixed(1)}%)\nPurple: ${purple} (${pct('purple').toFixed(1)}%)\n\nHighlighted: ${best}\n\nHistory only. Not a prediction.`;
+ highlightSlideColor(best);
+ box.textContent=`Color history saved: ${total}\n\nYellow: ${yellow} (${pct('yellow').toFixed(1)}%)\nRed: ${red} (${pct('red').toFixed(1)}%)\nPurple: ${purple} (${pct('purple').toFixed(1)}%)\n\nHighlighted bet: ${best}\n\nHistory only. Not a prediction.`;
 }
 
 function findGrid(){

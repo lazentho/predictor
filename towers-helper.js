@@ -4,7 +4,7 @@
 // Safe Towers visual helper loaded from GitHub.
 // Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
 
-const VERSION='1.7';
+const VERSION='1.8';
 const COLS=3;
 const STORE='tw_settings_v1';
 let picks=[];
@@ -31,13 +31,15 @@ css(`
 `);
 
 function isTowers(){return location.href.includes('/towers');}
+function menuTitle(){return isTowers()?'Towers ESP':'Nexus';}
+function updateMenuTitle(){const t=document.getElementById('twTitle');if(t)t.textContent=menuTitle();}
 function clamp(v,min,max){v=Number(v);if(!Number.isFinite(v))v=min;return Math.max(min,Math.min(max,Math.floor(v)));}
 function clear(){document.querySelectorAll('.twHL').forEach(e=>e.remove());}
 
 function panel(){
- if(document.getElementById('twPanel'))return;
+ if(document.getElementById('twPanel')){updateMenuTitle();return;}
  const p=document.createElement('div');p.id='twPanel';
- p.innerHTML=`<h2>Towers ESP</h2><p>Version: <b>${VERSION}</b></p><button id="twSet">Settings</button>`;
+ p.innerHTML=`<h2 id="twTitle">${menuTitle()}</h2><p>Version: <b>${VERSION}</b></p><button id="twSet">Settings</button>`;
  document.body.appendChild(p);
  document.getElementById('twSet').onclick=openSettings;
 }

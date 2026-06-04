@@ -4,6 +4,7 @@
 // Safe Towers visual helper loaded from GitHub.
 // Not a real predictor: random suggestions only. No cookies, no server, no auto-click.
 
+const VERSION='1.1';
 const COLS=3;
 let picks=[];
 let enabled=true;
@@ -15,19 +16,19 @@ css(`
 #twPanel h2{margin:0 0 8px;color:#39FF14;font-size:18px}#twPanel p{margin:6px 0;font-size:13px;line-height:1.35}
 #twPanel button{width:100%;padding:9px;margin-top:8px;border:0;border-radius:8px;background:#39FF14;color:#000;font-weight:bold;cursor:pointer}#twPanel button:hover{filter:brightness(1.1)}
 #twOut{margin-top:10px;font-size:13px;white-space:pre-wrap;color:#ddd;background:rgba(0,0,0,.35);padding:8px;border-radius:8px;max-height:200px;overflow-y:auto}
-.twWarn{color:#ffcc00;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
+.twWarn{color:#ffcc00;font-size:12px!important}.twVer{color:#9aa8ff!important;font-size:12px!important}.twHL{position:fixed;z-index:999999990;pointer-events:none;border:2px solid #39FF14;border-radius:6px;box-shadow:0 0 4px #39FF14,0 0 10px #39FF14,0 0 16px rgba(57,255,20,.7),inset 0 0 5px rgba(57,255,20,.35);background:rgba(57,255,20,.08)}
 `);
 
 function isTowers(){return location.href.includes('/towers');}
 function out(msg=''){
  const o=document.getElementById('twOut'); if(!o)return;
- const g=findGrid(); let t=`Found rows: ${g.length}\nFound tiles: ${g.reduce((a,r)=>a+r.length,0)}\n`;
+ const g=findGrid(); let t=`Version: ${VERSION}\nFound rows: ${g.length}\nFound tiles: ${g.reduce((a,r)=>a+r.length,0)}\n`;
  if(picks.length){const n=['Left','Middle','Right'];t+='\nPicks:\n';picks.forEach((p,i)=>t+=`Row ${i+1}: ${n[p]}\n`);}else t+='\nNo picks generated yet.\n';
  t+='\nRandom suggestions only.'; if(msg)t+=`\n\n${msg}`; o.textContent=t;
 }
 function panel(){
  if(!isTowers()||document.getElementById('twPanel'))return;
- const p=document.createElement('div'); p.id='twPanel'; p.innerHTML=`<h2>Towers ESP</h2><p><b>1 bomb / 2 safe</b></p><p>Safe chance per tile: <b>66.67%</b></p><button id="twGen">Generate ESP</button><button id="twRedraw">Redraw ESP</button><button id="twClear">Clear ESP</button><div id="twOut">Waiting...</div><p class="twWarn">Not a real predictor.</p>`;
+ const p=document.createElement('div'); p.id='twPanel'; p.innerHTML=`<h2>Towers ESP</h2><p class="twVer">Version: <b>${VERSION}</b></p><p><b>1 bomb / 2 safe</b></p><p>Safe chance per tile: <b>66.67%</b></p><button id="twGen">Generate ESP</button><button id="twRedraw">Redraw ESP</button><button id="twClear">Clear ESP</button><div id="twOut">Waiting...</div><p class="twWarn">Not a real predictor.</p>`;
  document.body.appendChild(p);
  document.getElementById('twGen').onclick=gen;
  document.getElementById('twRedraw').onclick=draw;

@@ -59,7 +59,7 @@ function targetRect(tile){
 }
 function gen(){enabled=true;picks=[];const g=findGrid();if(!g.length){out('Could not find Towers grid. Make sure the board is visible.');return;}for(let i=0;i<g.length;i++)picks.push(Math.floor(Math.random()*COLS));out();draw();}
 function draw(){clear(); if(!isTowers()||!enabled)return; const g=findGrid(); if(!g.length){out('Could not find grid when drawing.');return;} if(!picks.length){out('Click Generate ESP first.');return;}
- for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=targetRect(tile),w=b.width+4,h=b.height+4,box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
+ for(let r=0;r<g.length;r++){const tile=g[r][picks[r]??Math.floor(Math.random()*COLS)]; if(!tile)continue; const b=targetRect(tile),w=Math.max(34,b.width-10),h=b.height+4,box=document.createElement('div'); box.className='twHL'; box.style.left=`${b.left+b.width/2-w/2}px`; box.style.top=`${b.top+b.height/2-h/2}px`; box.style.width=`${w}px`; box.style.height=`${h}px`; document.body.appendChild(box);} out();
 }
 function reset(){clear();picks=[];document.getElementById('twPanel')?.remove();}
 setTimeout(panel,1000); addEventListener('resize',draw); addEventListener('scroll',draw,true);

@@ -1,3 +1,15 @@
+// ==UserScript==
+// @name         Crypted UI
+// @namespace    http://tampermonkey.net/
+// @version      2.0.0
+// @description  predicter
+// @author       Lazentho
+// @match        https://bloxflip.com/*
+// @updateURL    https://raw.githubusercontent.com/lazentho/predictor/refs/heads/main/crypted.user.js
+// @downloadURL  https://raw.githubusercontent.com/lazentho/predictor/refs/heads/main/crypted.user.js
+// @run-at       document-end
+// @grant        none
+// ==/UserScript==
 (() => {
   'use strict';
 

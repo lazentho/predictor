@@ -1,13 +1,3 @@
-// ==UserScript==
-// @name         Crypted UI
-// @namespace    http://tampermonkey.net/
-// @version      2.0.0
-// @description  Crypted UI with login, registration, and hidden admin panel
-// @author       You
-// @match        https://bloxflip.com/*
-// @grant        none
-// ==/UserScript==
-
 (() => {
   'use strict';
 
